@@ -15,6 +15,8 @@ YOUTUBE_USER_ID = "ERyYfZvwoWkf66MexKxznw"
 YOUTUBE_URL = "https://www.youtube.com/watch?v="
 YDL_OPTS = {
     'format': 'bestaudio/best',
+    'outtmpl': 'songs/%(title)s.%(ext)s',
+    'download_archive': 'archive.txt',
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
@@ -29,7 +31,13 @@ def get_credentials():
     if os.path.isfile("credentials.json"):
         with open("credentials.json", 'r') as f:
             creds_data = json.load(f)
-        creds = Credentials(creds_data['token'])
+        creds = Credentials(
+            None,
+            refresh_token=creds_data['refresh_token'],
+            token_uri=creds_data['token_uri'],
+            client_id=creds_data['client_id'],
+            client_secret=creds_data['client_secret']
+        )
     else:
         flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
             CLIENT_SECRETS_FILE, SCOPES)
@@ -42,7 +50,6 @@ def get_credentials():
             'client_secret': creds.client_secret,
             'scopes': creds.scopes
         }
-        print(creds_data)
         with open("credentials.json", 'w') as outfile:
             json.dump(creds_data, outfile)
     return creds
