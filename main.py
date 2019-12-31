@@ -8,11 +8,13 @@ import youtube_dl
 import json
 import os
 
+
 SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"]
 CLIENT_SECRETS_FILE = "client_secret.json"
 YOUTUBE_CHANNEL_ID = "UCERyYfZvwoWkf66MexKxznw"
 YOUTUBE_USER_ID = "ERyYfZvwoWkf66MexKxznw"
 YOUTUBE_URL = "https://www.youtube.com/watch?v="
+YOUTUBE_MUSIC_CATEGORY_ID = '10'
 YDL_OPTS = {
     'format': 'bestaudio/best',
     'outtmpl': 'songs/%(title)s.%(ext)s',
@@ -20,7 +22,7 @@ YDL_OPTS = {
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
-        'preferredquality': '192',
+        'preferredquality': '192'
     }],
 }
 # Disable OAuthlib's HTTPS verification when running locally.
@@ -93,6 +95,27 @@ def get_playlist_items(youtube, playlistId):
     return playlist_items
 
 
+def get_liked_music_videos(youtube):
+    nextPageToken = None
+    liked_music_videos = []
+
+    while True:
+        request = youtube.videos().list(
+            part="id,snippet",
+            maxResults=50,
+            myRating="like",
+            pageToken=nextPageToken
+        )
+        response = request.execute()
+        liked_music_videos.extend(response['items'])
+        nextPageToken = response.get('nextPageToken')
+        if nextPageToken is None:
+            break
+    liked_music_videos = [x for x in liked_music_videos if x.get(
+        'snippet').get('categoryId') == YOUTUBE_MUSIC_CATEGORY_ID]
+    return liked_music_videos
+
+
 def download_yt_audio(videoId):
     """
     https://github.com/ytdl-org/youtube-dl/blob/3e4cedf9e8cd3157df2457df7274d0c842421945/youtube_dl/YoutubeDL.py#L137-L312
@@ -108,13 +131,14 @@ def main():
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, credentials=credentials)
 
+    like_videos = get_liked_music_videos(youtube)
+    for video in like_videos:
+        download_yt_audio(video['id'])
     playlists = get_playlists(youtube)
-    # print(json.dumps(playlists, indent=4, sort_keys=True))
     music_playlists = filter_music_playlists(playlists)
     for _, playlistId in music_playlists.items():
         playlist_items = get_playlist_items(youtube, playlistId)
         for video in playlist_items:
-            print(json.dumps(video, indent=4))
             download_yt_audio(video['snippet']['resourceId']['videoId'])
 
 
