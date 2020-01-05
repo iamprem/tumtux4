@@ -22,17 +22,13 @@ YDL_OPTS = {
     'outtmpl': 'songs/%(title)s.%(ext)s',
     'download_archive': ARCHIVE_FILE,
     'ignoreerrors': True,
-    'writethumbnail': True,
     'postprocessors': [
         {
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192'
-        },
-        {
-            'key': 'EmbedThumbnail'
         }
-    ],
+    ]
 }
 # Disable OAuthlib's HTTPS verification when running locally.
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -125,7 +121,7 @@ def get_liked_music_videos(youtube):
     return liked_music_videos
 
 
-def download_yt_audio(videoId):
+def download_yt_audio(videoId, title):
     """
     https://github.com/ytdl-org/youtube-dl/blob/3e4cedf9e8cd3157df2457df7274d0c842421945/youtube_dl/YoutubeDL.py#L137-L312
     """
@@ -146,13 +142,14 @@ def main():
 
     liked_videos = get_liked_music_videos(youtube)
     for video in liked_videos:
-        download_yt_audio(video['id'])
+        download_yt_audio(video['id'], video['snippet']['title'])
     playlists = get_playlists(youtube)
     music_playlists = filter_music_playlists(playlists)
     for _, playlistId in music_playlists.items():
         playlist_items = get_playlist_items(youtube, playlistId)
         for video in playlist_items:
-            download_yt_audio(video['snippet']['resourceId']['videoId'])
+            download_yt_audio(video['snippet']['resourceId']
+                              ['videoId'], video['snippet']['title'])
 
 
 if __name__ == "__main__":

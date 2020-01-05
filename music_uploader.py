@@ -3,7 +3,8 @@ import glob
 from gmusicapi import Musicmanager
 from gmusicapi import Mobileclient
 from oauth2client.file import Storage
-
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC, error
 
 SONGS_DIR = 'songs/'
 MUSIC_OAUTH_FILE = 'music_credentials.json'
@@ -18,6 +19,20 @@ def get_music_manager():
     return music_manager
 
 
+def merge_album_art(filename):
+    audio = MP3(filename, ID3=ID3)
+    audio.tags.add(
+        APIC(
+            encoding=3,
+            mime='image/jpeg',
+            type=3,
+            desc=u'Cover',
+            data=open(filename[:-4] + '.jpg', 'rb').read()
+        )
+    )
+    audio.save()
+
+
 def delete_songs():
     mc = Mobileclient()
     if not mc.oauth_login(oauth_credentials=GPLAY_MOBILE_CLIENT, device_id=Mobileclient.FROM_MAC_ADDRESS):
@@ -29,8 +44,12 @@ def delete_songs():
 
 
 if __name__ == "__main__":
+
     music_manager = get_music_manager()
+
     file_paths = []
     for filename in glob.glob(os.path.join(SONGS_DIR, '*.mp3')):
+        #    merge_album_art(filename)
         uploads = music_manager.upload(filename, enable_matching=True)
         print(uploads)
+        os.remove(filename)
