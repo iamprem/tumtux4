@@ -6,6 +6,7 @@ import google_auth_oauthlib.flow
 from pytube import YouTube
 import youtube_dl
 import json
+import csv
 import os
 
 
@@ -15,15 +16,23 @@ YOUTUBE_CHANNEL_ID = "UCERyYfZvwoWkf66MexKxznw"
 YOUTUBE_USER_ID = "ERyYfZvwoWkf66MexKxznw"
 YOUTUBE_URL = "https://www.youtube.com/watch?v="
 YOUTUBE_MUSIC_CATEGORY_ID = '10'
+ARCHIVE_FILE = 'archive.txt'
 YDL_OPTS = {
     'format': 'bestaudio/best',
     'outtmpl': 'songs/%(title)s.%(ext)s',
-    'download_archive': 'archive.txt',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192'
-    }],
+    'download_archive': ARCHIVE_FILE,
+    'ignoreerrors': True,
+    'writethumbnail': True,
+    'postprocessors': [
+        {
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192'
+        },
+        {
+            'key': 'EmbedThumbnail'
+        }
+    ],
 }
 # Disable OAuthlib's HTTPS verification when running locally.
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -120,8 +129,12 @@ def download_yt_audio(videoId):
     """
     https://github.com/ytdl-org/youtube-dl/blob/3e4cedf9e8cd3157df2457df7274d0c842421945/youtube_dl/YoutubeDL.py#L137-L312
     """
-    with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
-        ydl.download([YOUTUBE_URL + videoId])
+    with open(ARCHIVE_FILE, 'w+') as tsvfile:
+        tsvreader = csv.reader(tsvfile, delimiter=" ")
+        downloaded = [item[1] for item in list(tsvreader)]
+        if (videoId not in downloaded):
+            with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
+                ydl.download([YOUTUBE_URL + videoId])
 
 
 def main():
@@ -131,8 +144,8 @@ def main():
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, credentials=credentials)
 
-    like_videos = get_liked_music_videos(youtube)
-    for video in like_videos:
+    liked_videos = get_liked_music_videos(youtube)
+    for video in liked_videos:
         download_yt_audio(video['id'])
     playlists = get_playlists(youtube)
     music_playlists = filter_music_playlists(playlists)

@@ -1,6 +1,7 @@
 client_secret.json
 credentials.json
 music_credentials.json
+mobileclient.json
 *.swp
 *.pyc
 env/
